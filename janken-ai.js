@@ -213,4 +213,6 @@ class JankenAI {
         this.history = [];
         // D1統計はリセットしない（明示的にリセットする場合は別途）
     }
+    // janken-ai.js の一番最後にこれを追加（クラスが正しく定義されているか確認）
+    alert('✅ JankenAI クラス定義完了');
 }
