@@ -5,3 +5,5 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "janken-ai-db"
 database_id = "0dbfc9bf-7b67-45af-88b7-0668ec650588"
+[build]
+upload = ["src/**"]
