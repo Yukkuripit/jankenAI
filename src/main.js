@@ -1,4 +1,24 @@
 // ============================================================
+//  デバッグ用：画面にログを表示
+// ============================================================
+function debugLog(msg) {
+    const area = document.getElementById('debug-area');
+    if (area) {
+        const time = new Date().toLocaleTimeString();
+        area.innerHTML += `[${time}] ${msg}\n`;
+        area.scrollTop = area.scrollHeight;
+    }
+    console.log(msg);
+}
+
+// 読み込み開始
+debugLog('✅ main.js 読み込み開始');
+
+// クラスが定義されているかチェック
+debugLog(`JankenAI クラス: ${typeof JankenAI}`);
+debugLog(`AcchiMuiteAI クラス: ${typeof AcchiMuiteAI}`);
+
+// ============================================================
 //  ファイル: main.js
 //  役割: D1と連携して統計データを読み書きする
 // ============================================================
