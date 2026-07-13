@@ -1,3 +1,7 @@
+// main.js の最初の方に追加
+alert('JankenAI クラス: ' + typeof JankenAI);
+alert('AcchiMuiteAI クラス: ' + typeof AcchiMuiteAI);
+
 // ============================================================
 //  ファイル: main.js
 //  デバッグ表示なし。alert で動作確認できるようにしてある。
