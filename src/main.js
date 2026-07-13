@@ -143,4 +143,25 @@ async function init() {
         });
     });
 
-    dom.mode
+    dom.modeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.checked) switchMode(e.target.value);
+        });
+    });
+
+    dom.resetBtn.addEventListener('click', handleReset);
+
+    // 初期表示
+    switchMode('normal');
+    updateJankenScore();
+    updateHistory();
+    updateAcchiScore();
+    dom.resultMsg.textContent = '👋 手を選んで対戦開始！';
+
+    // ページ離脱時に保存
+    window.addEventListener('beforeunload', () => {
+        saveStatsToD1(state.jankenAI.exportStats(), state.acchiAI.exportStats());
+    });
+}
+
+document.addEventListener('DOMContentLoaded', init);
