@@ -112,4 +112,266 @@ function resetAcchiUI(message = '👀 じゃんけんで勝敗が決まったら
     dom.acchiPlayerDir.textContent = '❓';
     dom.acchiAiDir.textContent = '❓';
     dom.acchiPlayerRole.textContent = '（役割未定）';
-    dom.acchiAiRole.textContent
+    dom.acchiAiRole.textContent = '（役割未定）';
+    dom.acchiResult.textContent = '⏳ 準備中...';
+    dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+    state.acchiPhase.active = false;
+}
+
+function enableJankenButtons(enabled) {
+    dom.jankenButtons.querySelectorAll('.hand-btn').forEach(btn => btn.disabled = !enabled);
+}
+
+// ----- あっちむいてホイ関連 -----
+function startAcchiPhase(jankenResult) {
+    if (state.currentMode !== 'normal') return;
+    if (jankenResult === 'draw') {
+        resetAcchiUI('🤝 引き分け！もう一度じゃんけんをしてください。');
+        enableJankenButtons(true);
+        return;
+    }
+    let playerRole, aiRole;
+    if (jankenResult === 'player_win') {
+        playerRole = 'pointer';
+        aiRole = 'mover';
+        dom.acchiStatus.textContent = '🎯 あなたの勝ち！ あなたは「指す側」です。';
+    } else {
+        playerRole = 'mover';
+        aiRole = 'pointer';
+        dom.acchiStatus.textContent = '🤖 AIの勝ち！ あなたは「動かす側」です。';
+    }
+    state.acchiPhase.active = true;
+    state.acchiPhase.playerRole = playerRole;
+    state.acchiPhase.aiRole = aiRole;
+    dom.acchiPlayerRole.textContent = playerRole === 'pointer' ? '👉 指す側' : '🙆 動かす側';
+    dom.acchiAiRole.textContent = aiRole === 'pointer' ? '👉 指す側' : '🙆 動かす側';
+    dom.acchiResult.textContent = '👉 方向を選んでください！';
+    dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = false);
+    enableJankenButtons(false);
+}
+
+function startAcchiOnlyRound() {
+    if (state.currentMode !== 'acchi_only') return;
+    if (state.acchiOnlyProcessing) return;
+    const playerRole = getRandomRole();
+    const aiRole = getOppositeRole(playerRole);
+    state.acchiPhase.active = true;
+    state.acchiPhase.playerRole = playerRole;
+    state.acchiPhase.aiRole = aiRole;
+    dom.acchiPlayerDir.textContent = '❓';
+    dom.acchiAiDir.textContent = '❓';
+    dom.acchiPlayerRole.textContent = playerRole === 'pointer' ? '👉 指す側' : '🙆 動かす側';
+    dom.acchiAiRole.textContent = aiRole === 'pointer' ? '👉 指す側' : '🙆 動かす側';
+    if (playerRole === 'pointer') {
+        dom.acchiStatus.textContent = '🎯 あなたは「指す側」です。';
+    } else {
+        dom.acchiStatus.textContent = '🙆 あなたは「動かす側」です。';
+    }
+    dom.acchiResult.textContent = '👉 方向を選んでください！';
+    dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = false);
+}
+
+function playAcchi(playerDir) {
+    if (!state.acchiPhase.active) return;
+    if (state.currentMode === 'acchi_only' && state.acchiOnlyProcessing) return;
+    dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+    if (state.currentMode === 'acchi_only') state.acchiOnlyProcessing = true;
+    const playerRole = state.acchiPhase.playerRole;
+    const aiRole = state.acchiPhase.aiRole;
+    const aiDir = state.acchiAI.play(aiRole, playerDir);
+    dom.acchiPlayerDir.textContent = getDirEmoji(playerDir);
+    dom.acchiAiDir.textContent = getDirEmoji(aiDir);
+    let acchiResultMsg = '';
+    if (playerRole === 'pointer') {
+        if (playerDir === aiDir) {
+            acchiResultMsg = '🎉 一致！ あっちむいてホイ あなたの勝ち！';
+            state.acchiStats.playerWins++;
+        } else {
+            acchiResultMsg = '😵 外れた！ あっちむいてホイ AIの勝ち！';
+            state.acchiStats.aiWins++;
+        }
+    } else {
+        if (aiDir === playerDir) {
+            acchiResultMsg = '💀 一致！ あっちむいてホイ AIの勝ち！';
+            state.acchiStats.aiWins++;
+        } else {
+            acchiResultMsg = '🙌 避けた！ あっちむいてホイ あなたの勝ち！';
+            state.acchiStats.playerWins++;
+        }
+    }
+    dom.acchiResult.textContent = acchiResultMsg;
+    updateAcchiScore();
+    state.acchiPhase.active = false;
+    if (state.currentMode === 'normal') {
+        dom.acchiStatus.textContent = '✅ あっちむいてホイ終了！ 次のじゃんけんをしてください。';
+        enableJankenButtons(true);
+        state.acchiOnlyProcessing = false;
+    } else if (state.currentMode === 'acchi_only') {
+        dom.acchiStatus.textContent = '⏳ 次のラウンド準備中...';
+        setTimeout(() => {
+            state.acchiOnlyProcessing = false;
+            if (state.currentMode === 'acchi_only') {
+                startAcchiOnlyRound();
+            }
+        }, 2000);
+    }
+}
+
+// ----- じゃんけんメイン処理 -----
+function handleJankenPlay(playerMove) {
+    const result = state.jankenAI.play(playerMove);
+    state.roundResults.push({
+        player: playerMove,
+        ai: result.aiMove,
+        result: result.result
+    });
+    const s = state.jankenStats;
+    if (result.result === 'player_win') s.playerWins++;
+    else if (result.result === 'ai_win') s.aiWins++;
+    else if (result.result === 'draw') s.draws++;
+    dom.playerHand.textContent = getEmoji(playerMove);
+    dom.aiHand.textContent = getEmoji(result.aiMove);
+    dom.resultMsg.textContent = `${resultToLabel(result.result)}`;
+    updateJankenScore();
+    updateHistory();
+    if (state.currentMode === 'janken_only') {
+        resetAcchiUI('⏭ じゃんけん連続モード中');
+        dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+        enableJankenButtons(true);
+        dom.resultMsg.textContent = '👋 次の手を選んでください！';
+    } else if (state.currentMode === 'normal') {
+        resetAcchiUI();
+        startAcchiPhase(result.result);
+    }
+}
+
+// ----- モード切り替え -----
+function switchMode(mode) {
+    state.currentMode = mode;
+    state.acchiPhase.active = false;
+    state.acchiOnlyProcessing = false;
+    dom.jankenArea.classList.remove('game-area-disabled');
+    dom.acchiArea.classList.remove('game-area-disabled');
+    if (mode === 'normal') {
+        enableJankenButtons(true);
+        dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+        resetAcchiUI('👀 じゃんけんで勝敗が決まったら、方向を選びます。');
+        dom.resultMsg.textContent = '👋 手を選んで対戦開始！';
+    } else if (mode === 'janken_only') {
+        dom.acchiArea.classList.add('game-area-disabled');
+        enableJankenButtons(true);
+        dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+        resetAcchiUI('⏭ じゃんけん連続モード中');
+        dom.resultMsg.textContent = '👋 手を選んでじゃんけん連続！';
+        dom.acchiPlayerDir.textContent = '❓';
+        dom.acchiAiDir.textContent = '❓';
+        dom.acchiPlayerRole.textContent = '（無効）';
+        dom.acchiAiRole.textContent = '（無効）';
+        dom.acchiResult.textContent = '⏸ スキップ中';
+    } else if (mode === 'acchi_only') {
+        dom.jankenArea.classList.add('game-area-disabled');
+        enableJankenButtons(false);
+        dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => btn.disabled = true);
+        resetAcchiUI('🔄 あっちむいてホイ連続モード！');
+        dom.resultMsg.textContent = '⏸ じゃんけんはスキップ中';
+        dom.playerHand.textContent = '⏸';
+        dom.aiHand.textContent = '⏸';
+        setTimeout(() => {
+            if (state.currentMode === 'acchi_only') {
+                startAcchiOnlyRound();
+            }
+        }, 300);
+    }
+    dom.playerHand.textContent = '❓';
+    dom.aiHand.textContent = '❓';
+    updateJankenScore();
+    updateHistory();
+    updateAcchiScore();
+}
+
+// ----- リセット -----
+function handleReset() {
+    if (!confirm('すべての学習データとスコアをリセットします。よろしいですか？')) return;
+    state.jankenAI.reset();
+    state.acchiAI.reset();
+    state.jankenStats = { playerWins: 0, aiWins: 0, draws: 0 };
+    state.acchiStats = { playerWins: 0, aiWins: 0 };
+    state.roundResults = [];
+    state.acchiPhase.active = false;
+    state.acchiOnlyProcessing = false;
+    dom.playerHand.textContent = '❓';
+    dom.aiHand.textContent = '❓';
+    dom.resultMsg.textContent = '👋 記憶をリセットしました。';
+    updateJankenScore();
+    updateHistory();
+    updateAcchiScore();
+    switchMode(state.currentMode);
+}
+
+// ----- 初期化 -----
+function init() {
+    // D1スキップ（後で復活）
+    dom.jankenButtons.querySelectorAll('.hand-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const hand = e.currentTarget.dataset.hand;
+            if (state.currentMode === 'acchi_only') return;
+            if (state.acchiPhase.active && state.currentMode === 'normal') {
+                if (!confirm('あっちむいてホイの途中です。中断しますか？')) return;
+                state.acchiPhase.active = false;
+                dom.acchiPad.querySelectorAll('.dir-btn').forEach(b => b.disabled = true);
+                resetAcchiUI('⏹ 中断されました。');
+                enableJankenButtons(true);
+                dom.acchiPlayerDir.textContent = '❓';
+                dom.acchiAiDir.textContent = '❓';
+                dom.acchiResult.textContent = '⏳ 中断されました';
+            }
+            if (state.acchiPhase.active) {
+                state.acchiPhase.active = false;
+                dom.acchiPad.querySelectorAll('.dir-btn').forEach(b => b.disabled = true);
+                resetAcchiUI('⏹ 中断');
+                enableJankenButtons(true);
+            }
+            handleJankenPlay(hand);
+        });
+    });
+
+    dom.acchiPad.querySelectorAll('.dir-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dir = e.currentTarget.dataset.dir;
+            if (state.currentMode === 'janken_only') {
+                alert('このモードではあっちむいてホイは無効です。');
+                return;
+            }
+            if (!state.acchiPhase.active) {
+                alert('現在あっちむいてホイのフェーズではありません。');
+                return;
+            }
+            playAcchi(dir);
+        });
+    });
+
+    dom.modeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                if (state.acchiPhase.active) {
+                    state.acchiPhase.active = false;
+                    dom.acchiPad.querySelectorAll('.dir-btn').forEach(b => b.disabled = true);
+                    resetAcchiUI('⏹ モード切替で中断');
+                    enableJankenButtons(true);
+                }
+                state.acchiOnlyProcessing = false;
+                switchMode(e.target.value);
+            }
+        });
+    });
+
+    dom.resetBtn.addEventListener('click', handleReset);
+
+    switchMode('normal');
+    dom.resultMsg.textContent = '👋 手を選んで対戦開始！';
+    updateJankenScore();
+    updateHistory();
+    updateAcchiScore();
+}
+
+document.addEventListener('DOMContentLoaded', init);
