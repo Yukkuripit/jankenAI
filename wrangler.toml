@@ -1,0 +1,7 @@
+name = "janken-ai"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "janken-ai-db"
+database_id = "YOUR_DATABASE_ID"
