@@ -1,0 +1,442 @@
+/* ----- ベースリセット & 全体 ----- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #f1f5f9;
+}
+
+.container {
+    max-width: 750px;
+    width: 100%;
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 40px;
+    padding: 30px 28px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-top: 4px;
+}
+
+/* ============================================= */
+/*  モード選択                                   */
+/* ============================================= */
+.mode-selector {
+    background: #0f172a;
+    padding: 14px 18px;
+    border-radius: 40px;
+    margin-bottom: 28px;
+    border: 1px solid #334155;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+}
+
+.mode-label {
+    font-weight: 700;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-right: 4px;
+}
+
+.mode-selector label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.mode-selector label:hover {
+    color: #facc15;
+}
+
+.mode-selector input[type="radio"] {
+    accent-color: #facc15;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* ----- ゲームエリアの無効化 (モード切替時に使用) ----- */
+.game-area-disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: grayscale(0.6);
+}
+
+/* ----- スコアボード (じゃんけん) ----- */
+.scoreboard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    background: #0f172a;
+    padding: 16px 14px;
+    border-radius: 24px;
+    margin-bottom: 30px;
+    border: 1px solid #334155;
+}
+
+.score-item {
+    text-align: center;
+    padding: 6px 0;
+}
+
+.score-item .label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+
+.score-item span:last-child {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f8fafc;
+    line-height: 1.2;
+}
+
+.score-item.highlight span:last-child {
+    color: #facc15;
+}
+
+/* ----- バトルエリア (じゃんけん) ----- */
+.battle-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    border-radius: 60px;
+    padding: 25px 20px;
+    margin-bottom: 20px;
+    border: 1px solid #334155;
+}
+
+.player-area, .ai-area {
+    text-align: center;
+    flex: 1;
+}
+
+.battle-area .label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.hand-icon {
+    font-size: 4.5rem;
+    line-height: 1.2;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.4));
+    transition: transform 0.15s ease;
+}
+
+.vs {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #facc15;
+    padding: 0 8px;
+    text-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+}
+
+/* ----- 結果メッセージ (じゃんけん) ----- */
+.result-box {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 16px 10px;
+    background: #1e293b;
+    border-radius: 30px;
+    margin-bottom: 24px;
+    border-left: 6px solid #facc15;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ----- アクションボタン (じゃんけん) ----- */
+.action-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.hand-btn {
+    flex: 1;
+    padding: 16px 8px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: #1e293b;
+    border: 2px solid #334155;
+    color: #f1f5f9;
+    border-radius: 60px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+}
+
+.hand-btn:hover {
+    transform: translateY(-4px);
+    background: #334155;
+    border-color: #facc15;
+    box-shadow: 0 12px 20px -8px rgba(250, 204, 21, 0.2);
+}
+
+.hand-btn:active {
+    transform: scale(0.96);
+}
+
+/* ----- 履歴 (じゃんけん) ----- */
+.history-section h3 {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-bottom: 10px;
+    font-weight: 400;
+}
+
+#history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 42px;
+    background: #0f172a;
+    padding: 12px 14px;
+    border-radius: 20px;
+    border: 1px solid #334155;
+    margin-bottom: 32px;
+}
+
+.history-tag {
+    background: #1e293b;
+    padding: 4px 14px;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    border: 1px solid #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.history-tag .win { color: #4ade80; }
+.history-tag .lose { color: #f87171; }
+.history-tag .draw { color: #facc15; }
+
+/* ============================================= */
+/*  セクション: あっちむいてホイ                */
+/* ============================================= */
+
+.acchi-divider {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #facc15;
+    letter-spacing: 4px;
+    margin: 20px 0 16px 0;
+    padding-top: 16px;
+    border-top: 2px dashed #334155;
+}
+
+.acchi-status-box {
+    background: #1e293b;
+    padding: 14px 18px;
+    border-radius: 60px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.acchi-battle-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    border-radius: 40px;
+    padding: 20px 16px;
+    margin-bottom: 18px;
+    border: 1px solid #334155;
+}
+
+.acchi-player, .acchi-ai {
+    text-align: center;
+    flex: 1;
+}
+
+.acchi-icon {
+    font-size: 3.8rem;
+    line-height: 1.2;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.4));
+}
+
+.acchi-role {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 4px;
+    font-weight: 600;
+    min-height: 20px;
+}
+
+.acchi-vs {
+    font-size: 1.8rem;
+    color: #facc15;
+    padding: 0 6px;
+    opacity: 0.6;
+}
+
+.acchi-direction-pad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 20px 0;
+}
+
+.dir-row {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+}
+
+.dir-btn {
+    width: 80px;
+    height: 65px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #1e293b;
+    border: 2px solid #334155;
+    color: #f1f5f9;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dir-btn:hover {
+    transform: translateY(-3px);
+    background: #334155;
+    border-color: #60a5fa;
+    box-shadow: 0 10px 20px -8px rgba(96, 165, 250, 0.2);
+}
+
+.dir-btn:active {
+    transform: scale(0.94);
+}
+
+.dir-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none !important;
+    border-color: #334155;
+}
+
+.acchi-result-box {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 14px 10px;
+    background: #1e293b;
+    border-radius: 30px;
+    margin-bottom: 20px;
+    border-left: 6px solid #60a5fa;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e2e8f0;
+}
+
+.acchi-scoreboard {
+    background: #0f172a;
+    padding: 12px 18px;
+    border-radius: 60px;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 0.95rem;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    margin-bottom: 30px;
+}
+
+.acchi-scoreboard strong {
+    color: #f8fafc;
+    font-size: 1.2rem;
+}
+
+/* ----- リセットボタン ----- */
+.reset-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 2px solid #475569;
+    color: #94a3b8;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 60px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reset-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: white;
+    box-shadow: 0 0 25px rgba(220, 38, 38, 0.2);
+}
+
+/* ----- レスポンシブ ----- */
+@media (max-width: 600px) {
+    .container { padding: 16px; }
+    .scoreboard { grid-template-columns: repeat(2, 1fr); }
+    .hand-icon { font-size: 3.2rem; }
+    .action-buttons { flex-direction: column; }
+    .hand-btn { padding: 14px; }
+    .battle-area { padding: 15px; }
+    .dir-btn { width: 60px; height: 55px; font-size: 0.9rem; }
+    .acchi-icon { font-size: 2.8rem; }
+    .mode-selector { flex-direction: column; align-items: flex-start; gap: 6px; }
+}

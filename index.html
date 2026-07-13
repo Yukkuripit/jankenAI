@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>じゃんけん＆あっちむいてホイ AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 じゃんけん特化AI</h1>
+            <p class="subtitle">相手の行動パターンを学習して勝つ！＋あっちむいてホイ</p>
+        </header>
+
+        <!-- ========================================= -->
+        <!--  モード選択（3つに戻す）                    -->
+        <!-- ========================================= -->
+        <div class="mode-selector">
+            <span class="mode-label">🎮 ゲームモード：</span>
+            <label>
+                <input type="radio" name="game-mode" value="normal" checked>
+                通常 (じゃんけん→あっちむいてホイ)
+            </label>
+            <label>
+                <input type="radio" name="game-mode" value="janken_only">
+                じゃんけん連続
+            </label>
+            <label>
+                <input type="radio" name="game-mode" value="acchi_only">
+                あっちむいてホイ連続
+            </label>
+        </div>
+
+        <!-- ========================================= -->
+        <!--  セクション1: スコアボード（じゃんけん用）  -->
+        <!-- ========================================= -->
+        <div class="scoreboard" id="janken-score">
+            <div class="score-item">
+                <span class="label">あなたの勝ち</span>
+                <span id="player-wins">0</span>
+            </div>
+            <div class="score-item">
+                <span class="label">AIの勝ち</span>
+                <span id="ai-wins">0</span>
+            </div>
+            <div class="score-item">
+                <span class="label">引き分け</span>
+                <span id="draws">0</span>
+            </div>
+            <div class="score-item highlight">
+                <span class="label">AI勝率</span>
+                <span id="win-rate">0%</span>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!--  セクション2: じゃんけんエリア             -->
+        <!-- ========================================= -->
+        <div id="janken-area">
+            <div class="battle-area">
+                <div class="player-area">
+                    <div class="label">あなた</div>
+                    <div class="hand-icon" id="player-hand">❓</div>
+                </div>
+                <div class="vs">⚡VS⚡</div>
+                <div class="ai-area">
+                    <div class="label">AI 🤖</div>
+                    <div class="hand-icon" id="ai-hand">❓</div>
+                </div>
+            </div>
+
+            <div class="result-box" id="result-message">👋 手を選んで対戦開始！</div>
+
+            <div class="action-buttons" id="janken-buttons">
+                <button class="hand-btn" data-hand="グー">✊ グー</button>
+                <button class="hand-btn" data-hand="チョキ">✌️ チョキ</button>
+                <button class="hand-btn" data-hand="パー">✋ パー</button>
+            </div>
+
+            <div class="history-section">
+                <h3>📜 対戦履歴（直近10件）</h3>
+                <div id="history-list"></div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!--  セクション3: あっちむいてホイエリア          -->
+        <!-- ============================================= -->
+        <div class="acchi-divider">⬇️ あっちむいてホイ ⬇️</div>
+
+        <div id="acchi-area">
+            <div id="acchi-status" class="acchi-status-box">
+                👀 じゃんけんで勝敗が決まったら始まります！
+            </div>
+
+            <div class="acchi-battle-area">
+                <div class="acchi-player">
+                    <div class="label">あなたの方向</div>
+                    <div class="acchi-icon" id="acchi-player-dir">❓</div>
+                    <div class="acchi-role" id="acchi-player-role">（役割未定）</div>
+                </div>
+                <div class="acchi-vs">🔄</div>
+                <div class="acchi-ai">
+                    <div class="label">AIの方向 🤖</div>
+                    <div class="acchi-icon" id="acchi-ai-dir">❓</div>
+                    <div class="acchi-role" id="acchi-ai-role">（役割未定）</div>
+                </div>
+            </div>
+
+            <div class="acchi-direction-pad" id="acchi-pad">
+                <button class="dir-btn" data-dir="上">⬆️ 上</button>
+                <div class="dir-row">
+                    <button class="dir-btn" data-dir="左">⬅️ 左</button>
+                    <button class="dir-btn" data-dir="下">⬇️ 下</button>
+                    <button class="dir-btn" data-dir="右">➡️ 右</button>
+                </div>
+            </div>
+
+            <div id="acchi-result" class="acchi-result-box">⏳ 準備中...</div>
+
+            <div class="acchi-scoreboard">
+                <span>🏆 あっちむいてホイ 通算成績</span>
+                <span>あなた: <strong id="acchi-player-score">0</strong> 勝</span>
+                <span>AI: <strong id="acchi-ai-score">0</strong> 勝</span>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!--  共通リセットボタン                        -->
+        <!-- ========================================= -->
+        <button class="reset-btn" id="reset-btn">🔄 すべての記憶をリセット</button>
+    </div>
+
+    <script src="janken-ai.js"></script>
+    <script src="acchimuite-ai.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
