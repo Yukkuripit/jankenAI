@@ -3,6 +3,184 @@
 //  役割: DOM操作・モード切替・クールダウン制御・テーマ切り替え
 // ============================================================
 
+// ============================================================
+//  main.js 先頭に追加
+// ============================================================
+
+// ----- API設定 -----
+const API_BASE = 'https://your-pages-project.pages.dev'; // あなたのPagesのURL
+
+// ----- ユーザーID管理 -----
+function getUserId() {
+    let userId = localStorage.getItem('janken_user_id');
+    if (!userId) {
+        userId = crypto.randomUUID ? crypto.randomUUID() : 
+                 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('janken_user_id', userId);
+    }
+    return userId;
+}
+
+// ============================================================
+//  サーバー通信関数
+// ============================================================
+
+// サーバーから統計データを取得
+async function fetchStatsFromServer(userId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/stats?user_id=${userId}`);
+        if (!res.ok) throw new Error('Network error');
+        return await res.json();
+    } catch (e) {
+        console.warn('サーバーからのデータ取得失敗', e);
+        return null;
+    }
+}
+
+// サーバーに統計データを送信
+async function sendStatsToServer(userId, jankenStats, acchiStats) {
+    try {
+        const res = await fetch(`${API_BASE}/api/stats`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                janken: jankenStats,
+                acchi: acchiStats
+            })
+        });
+        return await res.json();
+    } catch (e) {
+        console.warn('サーバーへのデータ送信失敗', e);
+        return null;
+    }
+}
+
+// ============================================================
+//  AIに統計データを適用
+// ============================================================
+
+function applyStatsToJankenAI(ai, stats) {
+    if (!stats || !stats.janken) return;
+    const j = stats.janken;
+
+    // counts → 履歴として設定
+    const history = [];
+    for (const [move, count] of Object.entries(j.counts || {})) {
+        for (let i = 0; i < Math.min(count, 20); i++) {
+            history.push(ai.moveIndex[move]);
+        }
+    }
+    ai.history = history.slice(-ai.MAX_HISTORY);
+
+    // diffCounts を設定
+    ai.diffCounts = {};
+    for (const [diff, count] of Object.entries(j.diffCounts || {})) {
+        ai.diffCounts[parseInt(diff)] = count;
+    }
+
+    // transitionCounts を設定
+    ai.transitionCounts = {};
+    for (const [from, toMap] of Object.entries(j.transitions || {})) {
+        for (const [to, count] of Object.entries(toMap)) {
+            ai.transitionCounts[from + ',' + to] = count;
+        }
+    }
+}
+
+function applyStatsToAcchiAI(ai, stats) {
+    if (!stats || !stats.acchi) return;
+    const a = stats.acchi;
+
+    const history = [];
+    for (const [dir, count] of Object.entries(a.counts || {})) {
+        for (let i = 0; i < Math.min(count, 20); i++) {
+            history.push(ai.dirIndex[dir]);
+        }
+    }
+    ai.opponentHistory = history.slice(-ai.MAX_HISTORY);
+
+    ai.diffCounts = {};
+    for (const [diff, count] of Object.entries(a.diffCounts || {})) {
+        ai.diffCounts[parseInt(diff)] = count;
+    }
+
+    ai.transitionCounts = {};
+    for (const [from, toMap] of Object.entries(a.transitions || {})) {
+        for (const [to, count] of Object.entries(toMap)) {
+            ai.transitionCounts[from + ',' + to] = count;
+        }
+    }
+}
+
+// ============================================================
+//  現在の統計データをエクスポート（サーバー送信用）
+// ============================================================
+
+function exportStatsFromJankenAI(ai) {
+    const counts = {};
+    for (const idx of ai.history) {
+        const move = ai.moves[idx];
+        counts[move] = (counts[move] || 0) + 1;
+    }
+
+    const transitions = {};
+    for (let i = 1; i < ai.history.length; i++) {
+        const from = ai.moves[ai.history[i - 1]];
+        const to = ai.moves[ai.history[i]];
+        if (!transitions[from]) transitions[from] = {};
+        transitions[from][to] = (transitions[from][to] || 0) + 1;
+    }
+
+    const diffCounts = {};
+    for (let i = 1; i < ai.history.length; i++) {
+        const diff = ((ai.history[i] - ai.history[i - 1]) % 3 + 3) % 3;
+        diffCounts[diff] = (diffCounts[diff] || 0) + 1;
+    }
+
+    return { counts, transitions, diffCounts, totalPlays: ai.history.length };
+}
+
+function exportStatsFromAcchiAI(ai) {
+    const counts = {};
+    for (const idx of ai.opponentHistory) {
+        const dir = ai.directions[idx];
+        counts[dir] = (counts[dir] || 0) + 1;
+    }
+
+    const transitions = {};
+    for (let i = 1; i < ai.opponentHistory.length; i++) {
+        const from = ai.directions[ai.opponentHistory[i - 1]];
+        const to = ai.directions[ai.opponentHistory[i]];
+        if (!transitions[from]) transitions[from] = {};
+        transitions[from][to] = (transitions[from][to] || 0) + 1;
+    }
+
+    const diffCounts = {};
+    for (let i = 1; i < ai.opponentHistory.length; i++) {
+        const diff = ((ai.opponentHistory[i] - ai.opponentHistory[i - 1]) % 4 + 4) % 4;
+        diffCounts[diff] = (diffCounts[diff] || 0) + 1;
+    }
+
+    return { counts, transitions, diffCounts, totalPlays: ai.opponentHistory.length };
+}
+
+// ============================================================
+//  初期化時にサーバーからデータをロード
+// ============================================================
+
+async function loadAIFromServer() {
+    const userId = getUserId();
+    const data = await fetchStatsFromServer(userId);
+    
+    if (data) {
+        applyStatsToJankenAI(state.jankenAI, data);
+        applyStatsToAcchiAI(state.acchiAI, data);
+        console.log(`✅ サーバーからデータをロードしました (user: ${userId})`);
+    }
+    return userId;
+}
+
 // ----- 定数 -----
 const COOLDOWN_MS = 1000;
 
@@ -362,8 +540,8 @@ function playAcchi(playerDir) {
     }
 }
 
-// ----- じゃんけんメイン処理 -----
-function handleJankenPlay(playerMove) {
+// ----- じゃんけんメイン処理（修正版） -----
+async function handleJankenPlay(playerMove) {
     const result = state.jankenAI.play(playerMove);
 
     state.roundResults.push({
@@ -382,6 +560,11 @@ function handleJankenPlay(playerMove) {
     dom.resultMsg.textContent = `${resultToLabel(result.result)}`;
     updateJankenScore();
     updateHistory();
+
+    // 🆕 5回に1回だけサーバーに同期（負荷軽減）
+    if (state.roundResults.length % 5 === 0) {
+        await syncStatsToServer();
+    }
 
     if (state.currentMode === 'janken_only') {
         resetAcchiUI('⏭ じゃんけん連続モード中（あっちむいてホイはスキップ）');
@@ -491,7 +674,10 @@ function initCooldownToggle() {
 }
 
 // ----- 初期化 -----
-function init() {
+async function init() {
+
+    await loadAIFromServer();
+
     // 🆕 テーマ読み込み
     loadTheme();
 
@@ -566,6 +752,17 @@ function init() {
 
     switchMode('normal');
     dom.resultMsg.textContent = '👋 手を選んで対戦開始！';
+}
+
+// ============================================================
+//  サーバー同期（プレイ後に呼ぶ）
+// ============================================================
+
+async function syncStatsToServer() {
+    const userId = getUserId();
+    const jankenStats = exportStatsFromJankenAI(state.jankenAI);
+    const acchiStats = exportStatsFromAcchiAI(state.acchiAI);
+    await sendStatsToServer(userId, jankenStats, acchiStats);
 }
 
 document.addEventListener('DOMContentLoaded', init);
