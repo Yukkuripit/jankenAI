@@ -1,79 +1,112 @@
 // ============================================================
 //  ファイル: janken-ai.js
-//  役割: じゃんけん特化AI (ランダム判定なし)
-//  - 履歴サイズ150
-//  - スコアリングのみで予測（ランダム判定なし）
+//  役割: じゃんけん特化AI (配置思考ゼロ版)
+//  特徴: 差分パターン(配置順序)を完全無効化
+//        メタ予測強度85%で相手の読みを読む
 // ============================================================
 
 class JankenAI {
     constructor() {
         this.MAX_HISTORY = 150;
-
         this.moves = ['グー', 'チョキ', 'パー'];
         this.moveIndex = { 'グー': 0, 'チョキ': 1, 'パー': 2 };
         this.history = [];
 
+        // 勝ちマップ
         this.winMap = {
             'グー': 'パー',
             'チョキ': 'グー',
             'パー': 'チョキ'
         };
+
+        // 負けマップ（相手の手に対して負ける手）
+        this.loseMap = {
+            'グー': 'チョキ',
+            'チョキ': 'パー',
+            'パー': 'グー'
+        };
+
+        // 相手の手に勝つための手
+        this.beats = {
+            'グー': 'パー',
+            'チョキ': 'グー',
+            'パー': 'チョキ'
+        };
+
         this.firstMoveBias = 'グー';
+        this.firstHandBias = {
+            'グー': 0.36,
+            'チョキ': 0.33,
+            'パー': 0.31
+        };
+        this.transitionBias = {
+            'グー': { 'グー': 0.30, 'チョキ': 0.38, 'パー': 0.32 },
+            'チョキ': { 'グー': 0.35, 'チョキ': 0.28, 'パー': 0.37 },
+            'パー': { 'グー': 0.33, 'チョキ': 0.36, 'パー': 0.31 }
+        };
+
+        // 外し率（0〜1）：デフォルト15%
+        this.missRate = 0.15;
+        // メタ予測強度（0〜1）：85%で相手の読みを考慮
+        this.metaStrength = 0.85;
     }
 
+    // ----- 相手の手を学習 -----
     observe(playerMove) {
-        const currentIdx = this.moveIndex[playerMove];
-        this.history.push(currentIdx);
+        const idx = this.moveIndex[playerMove];
+        this.history.push(idx);
         if (this.history.length > this.MAX_HISTORY) {
             this.history.shift();
         }
     }
 
-    predict() {
+    // ----- 相手の次の手の確率分布を計算（配置順序を完全無視） -----
+    predictDistribution() {
         const len = this.history.length;
-        if (len === 0) return this.firstMoveBias;
-
-        const lastIdx = this.history[len - 1];
         const scores = { 'グー': 0, 'チョキ': 0, 'パー': 0 };
 
-        // ---- 差分カウント再計算 ----
-        const diffCounts = {};
-        for (let i = 1; i < len; i++) {
-            const diff = ((this.history[i] - this.history[i - 1]) % 3 + 3) % 3;
-            diffCounts[diff] = (diffCounts[diff] || 0) + 1;
+        // 初手
+        if (len === 0) {
+            for (const [move, prob] of Object.entries(this.firstHandBias)) {
+                scores[move] = prob;
+            }
+            return this._normalize(scores);
         }
 
-        // ---- 1. 差分パターン（重み1.2） ----
-        if (len >= 2) {
-            const prevIdx = this.history[len - 2];
-            const lastDiff = ((lastIdx - prevIdx) % 3 + 3) % 3;
-            if (diffCounts[lastDiff] && diffCounts[lastDiff] > 1) {
-                const nextIdx = (lastIdx + lastDiff) % 3;
-                scores[this.moves[nextIdx]] += 2.0;
+        const lastIdx = this.history[len - 1];
+        const lastMove = this.moves[lastIdx];
+
+        // ---- 2回目（履歴1件） ----
+        if (len === 1) {
+            const bias = this.transitionBias[lastMove] || { 'グー': 0.33, 'チョキ': 0.33, 'パー': 0.34 };
+            for (const [move, prob] of Object.entries(bias)) {
+                scores[move] += prob * 3.0;
             }
-            for (const [diff, count] of Object.entries(diffCounts)) {
-                const d = parseInt(diff);
-                const nextIdx = (lastIdx + d) % 3;
-                const weight = count / len;
-                scores[this.moves[nextIdx]] += weight * 1.2;
+            for (const [move, prob] of Object.entries(this.firstHandBias)) {
+                scores[move] += prob * 0.5;
             }
+            scores[lastMove] -= 0.3;
+            return this._normalize(scores);
         }
 
-        // ---- 2. 絶対遷移（重み1.0） ----
+        // ---- 🔽 差分パターン（配置順序）を完全に無効化！ ----
+        // 従来の差分カウント処理をすべてコメントアウト or 削除
+        // 代わりに絶対遷移（直前の手→次の手）のみを使用
+
+        // ---- 1. 絶対遷移（直前の手→次の手） ----
         const transitionCounts = {};
         for (let i = 1; i < len; i++) {
             const key = this.moves[this.history[i - 1]] + ',' + this.moves[this.history[i]];
             transitionCounts[key] = (transitionCounts[key] || 0) + 1;
         }
-        const lastMove = this.moves[lastIdx];
         for (const [key, count] of Object.entries(transitionCounts)) {
             const [prev, next] = key.split(',');
             if (prev === lastMove) {
-                scores[next] += count * 1.0;
+                scores[next] += count * 1.5; // 重みUP
             }
         }
 
-        // ---- 3. 直近傾向（直近5回） ----
+        // ---- 2. 直近傾向（直近5回） ----
         const recent = this.history.slice(-5);
         if (recent.length > 0) {
             const freq = {};
@@ -82,11 +115,11 @@ class JankenAI {
                 freq[m] = (freq[m] || 0) + 1;
             }
             for (const m of this.moves) {
-                scores[m] += (freq[m] || 0) / recent.length * 1.0;
+                scores[m] += (freq[m] || 0) / recent.length * 1.2;
             }
         }
 
-        // ---- 4. 全局傾向（重み0.8） ----
+        // ---- 3. 全局傾向（全履歴） ----
         if (len > 0) {
             const freq = {};
             for (const idx of this.history) {
@@ -94,47 +127,106 @@ class JankenAI {
                 freq[m] = (freq[m] || 0) + 1;
             }
             for (const m of this.moves) {
-                scores[m] += (freq[m] || 0) / len * 0.8;
+                scores[m] += (freq[m] || 0) / len * 1.0;
             }
         }
 
-        // ---- 5. 連続ペナルティ（-0.2） ----
-        scores[this.moves[lastIdx]] -= 0.2;
+        // ---- 4. 連続ペナルティ（同じ手を出しにくいバイアス） ----
+        scores[lastMove] -= 0.3;
 
-        // ---- 6. 最高スコア選択 ----
-        let bestScore = -Infinity;
-        let bestMoves = [];
+        // ---- 5. 履歴が少ない場合のバイアス補強 ----
+        if (len <= 4) {
+            const bias = this.transitionBias[lastMove] || { 'グー': 0.33, 'チョキ': 0.33, 'パー': 0.34 };
+            const biasWeight = Math.max(0.3, 1.0 - (len - 1) * 0.25);
+            for (const [move, prob] of Object.entries(bias)) {
+                scores[move] += prob * biasWeight * 2.0;
+            }
+        }
+
+        return this._normalize(scores);
+    }
+
+    // ----- スコアを正規化（確率分布に変換） -----
+    _normalize(scores) {
+        const values = Object.values(scores);
+        const minVal = Math.min(...values);
+        const shifted = {};
+        let sum = 0;
         for (const [move, score] of Object.entries(scores)) {
-            if (score > bestScore) {
-                bestScore = score;
-                bestMoves = [move];
-            } else if (score === bestScore) {
-                bestMoves.push(move);
-            }
+            const s = Math.max(0, score - minVal + 0.01);
+            shifted[move] = s;
+            sum += s;
         }
-
-        // フォールバック：最多手
-        if (bestScore <= 0) {
-            const freq = {};
-            for (const idx of this.history) {
-                const m = this.moves[idx];
-                freq[m] = (freq[m] || 0) + 1;
-            }
-            let maxF = 0, best = this.moves[0];
-            for (const [m, c] of Object.entries(freq)) {
-                if (c > maxF) { maxF = c; best = m; }
-            }
-            return best;
+        if (sum === 0) {
+            for (const m of this.moves) shifted[m] = 1 / this.moves.length;
+            return shifted;
         }
-
-        return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        const result = {};
+        for (const [move, s] of Object.entries(shifted)) {
+            result[move] = s / sum;
+        }
+        return result;
     }
 
+    // ----- メタ予測：相手の読みを読んで最適手を選択 -----
     getAIMove() {
-        const predicted = this.predict();
-        return this.winMap[predicted];
+        // 1. 相手が次に出す確率分布を取得
+        const opponentDist = this.predictDistribution();
+
+        // 2. AIが各手を出した場合の「直接勝率」を計算
+        const directWinRates = {};
+        for (const aiMove of this.moves) {
+            let winProb = 0;
+            for (const [oppMove, prob] of Object.entries(opponentDist)) {
+                if (this.winMap[aiMove] === oppMove) {
+                    winProb += prob;
+                } else if (aiMove === oppMove) {
+                    winProb += prob * 0.5;
+                }
+            }
+            directWinRates[aiMove] = winProb;
+        }
+
+        // 3. メタ予測：相手がAIの手を予測して勝とうとする場合を考慮
+        const metaWinRates = {};
+        for (const aiMove of this.moves) {
+            const opponentCounter = this.beats[aiMove]; // AIの手に勝つ手
+            let metaWinProb = 0;
+            for (const [oppMove, prob] of Object.entries(opponentDist)) {
+                if (oppMove === opponentCounter) {
+                    metaWinProb += 0;
+                } else if (oppMove === aiMove) {
+                    metaWinProb += prob * 0.5;
+                } else {
+                    metaWinProb += prob * 1.0;
+                }
+            }
+
+            const finalWinRate = (1 - this.metaStrength) * directWinRates[aiMove] +
+                                 this.metaStrength * metaWinProb;
+            metaWinRates[aiMove] = finalWinRate;
+        }
+
+        // 4. 最も勝率の高い手を選択
+        let bestMove = null;
+        let bestRate = -Infinity;
+        for (const [move, rate] of Object.entries(metaWinRates)) {
+            if (rate > bestRate) {
+                bestRate = rate;
+                bestMove = move;
+            }
+        }
+
+        // 5. 外し率
+        if (Math.random() < this.missRate) {
+            const others = this.moves.filter(m => m !== bestMove);
+            return others[Math.floor(Math.random() * others.length)];
+        }
+
+        return bestMove || this.moves[0];
     }
 
+    // ----- 1ラウンド実行 -----
     play(playerMove) {
         const aiMove = this.getAIMove();
         const result = this._judge(playerMove, aiMove);

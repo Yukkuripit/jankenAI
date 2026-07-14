@@ -14,16 +14,11 @@
                     <h1>🤖 じゃんけん特化AI</h1>
                     <p class="subtitle">相手の行動パターンを学習して勝つ！＋あっちむいてホイ</p>
                 </div>
-                <!-- 🆕 ダークモード切り替えボタン -->
-                <button id="theme-toggle" class="theme-toggle" aria-label="テーマ切り替え">
-                    🌙
-                </button>
+                <button id="theme-toggle" class="theme-toggle" aria-label="テーマ切り替え">🌙</button>
             </div>
         </header>
 
-        <!-- ========================================= -->
-        <!--  モード選択                                -->
-        <!-- ========================================= -->
+        <!-- モード選択 -->
         <div class="mode-selector">
             <span class="mode-label">🎮 ゲームモード：</span>
             <label>
@@ -40,20 +35,23 @@
             </label>
         </div>
 
-        <!-- ========================================= -->
-        <!--  クールダウン設定（連打防止）              -->
-        <!-- ========================================= -->
-        <div class="cooldown-toggle">
-            <label>
-                <input type="checkbox" id="cooldown-toggle" checked>
-                ⏱ クールダウン (連打防止) 1s
-            </label>
-            <span class="cooldown-status" id="cooldown-status">オン</span>
+        <!-- 難易度スライダー -->
+        <div class="difficulty-toggle">
+            <span class="difficulty-label">🎯 AIの強さ：</span>
+            <input type="range" id="difficulty-slider" min="0" max="100" value="50">
+            <span id="difficulty-value">普通</span>
         </div>
 
-        <!-- ========================================= -->
-        <!--  セクション1: スコアボード（じゃんけん用）  -->
-        <!-- ========================================= -->
+        <!-- 🆕 クールダウントグルを削除 → 思考中表示に置き換え -->
+        <!-- 🆕 思考中インジケーター -->
+        <div class="thinking-indicator" id="thinking-indicator">
+           <span class="thinking-label" id="thinking-label">🧠 AI思考中...</span>
+           <div class="thinking-dots">
+               <span></span><span></span><span></span>
+           </div>
+        </div>
+
+        <!-- スコアボード -->
         <div class="scoreboard" id="janken-score">
             <div class="score-item">
                 <span class="label">あなたの勝ち</span>
@@ -73,9 +71,7 @@
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!--  セクション2: じゃんけんエリア             -->
-        <!-- ========================================= -->
+        <!-- じゃんけんエリア -->
         <div id="janken-area">
             <div class="battle-area">
                 <div class="player-area">
@@ -103,15 +99,11 @@
             </div>
         </div>
 
-        <!-- ============================================= -->
-        <!--  セクション3: あっちむいてホイエリア          -->
-        <!-- ============================================= -->
+        <!-- あっちむいてホイ -->
         <div class="acchi-divider">⬇️ あっちむいてホイ ⬇️</div>
 
         <div id="acchi-area">
-            <div id="acchi-status" class="acchi-status-box">
-                👀 じゃんけんで勝敗が決まったら始まります！
-            </div>
+            <div id="acchi-status" class="acchi-status-box">👀 じゃんけんで勝敗が決まったら始まります！</div>
 
             <div class="acchi-battle-area">
                 <div class="acchi-player">
@@ -145,9 +137,6 @@
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!--  共通リセットボタン                        -->
-        <!-- ========================================= -->
         <button class="reset-btn" id="reset-btn">🔄 すべての記憶をリセット</button>
     </div>
 

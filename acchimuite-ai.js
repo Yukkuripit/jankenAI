@@ -1,19 +1,17 @@
 // ============================================================
 //  ファイル: acchimuite-ai.js
-//  役割: あっちむいてホイAI (ランダム判定なし)
-//  - 履歴サイズ150
-//  - スコアリングのみで予測（ランダム判定なし）
+//  役割: あっちむいてホイAI (配置思考ゼロ版)
+//  特徴: 方向の差分パターン(配置順序)を完全無効化
 // ============================================================
 
 class AcchiMuiteAI {
     constructor() {
         this.MAX_HISTORY = 150;
-
         this.directions = ['上', '左', '下', '右'];
         this.dirIndex = { '上': 0, '左': 1, '下': 2, '右': 3 };
-
         this.opponentHistory = [];
         this.myHistory = [];
+        this.missRate = 0.15;
     }
 
     observeOpponent(direction) {
@@ -34,30 +32,10 @@ class AcchiMuiteAI {
         const scores = {};
         for (const d of this.directions) scores[d] = 0;
 
-        // ---- 差分カウント再計算 ----
-        const diffCounts = {};
-        for (let i = 1; i < len; i++) {
-            const diff = ((this.opponentHistory[i] - this.opponentHistory[i - 1]) % 4 + 4) % 4;
-            diffCounts[diff] = (diffCounts[diff] || 0) + 1;
-        }
+        // ---- 差分パターン（配置順序）を完全無効化！ ----
+        // 従来の差分カウント処理をすべてコメントアウト
 
-        // ---- 1. 差分パターン（重み1.2） ----
-        if (len >= 2) {
-            const prevIdx = this.opponentHistory[len - 2];
-            const lastDiff = ((lastIdx - prevIdx) % 4 + 4) % 4;
-            if (diffCounts[lastDiff] && diffCounts[lastDiff] > 1) {
-                const nextIdx = (lastIdx + lastDiff) % 4;
-                scores[this.directions[nextIdx]] += 2.0;
-            }
-            for (const [diff, count] of Object.entries(diffCounts)) {
-                const d = parseInt(diff);
-                const nextIdx = (lastIdx + d) % 4;
-                const weight = count / len;
-                scores[this.directions[nextIdx]] += weight * 1.2;
-            }
-        }
-
-        // ---- 2. 絶対遷移（重み1.0） ----
+        // ---- 1. 絶対遷移（直前の方向→次の方向） ----
         const transitionCounts = {};
         for (let i = 1; i < len; i++) {
             const key = this.directions[this.opponentHistory[i - 1]] + ',' + this.directions[this.opponentHistory[i]];
@@ -67,11 +45,11 @@ class AcchiMuiteAI {
         for (const [key, count] of Object.entries(transitionCounts)) {
             const [prev, next] = key.split(',');
             if (prev === lastDir) {
-                scores[next] += count * 1.0;
+                scores[next] += count * 1.5;
             }
         }
 
-        // ---- 3. 直近傾向 ----
+        // ---- 2. 直近傾向 ----
         const recent = this.opponentHistory.slice(-5);
         if (recent.length > 0) {
             const freq = {};
@@ -80,11 +58,11 @@ class AcchiMuiteAI {
                 freq[d] = (freq[d] || 0) + 1;
             }
             for (const d of this.directions) {
-                scores[d] += (freq[d] || 0) / recent.length * 1.0;
+                scores[d] += (freq[d] || 0) / recent.length * 1.2;
             }
         }
 
-        // ---- 4. 全局傾向（重み0.8） ----
+        // ---- 3. 全局傾向 ----
         if (len > 0) {
             const freq = {};
             for (const idx of this.opponentHistory) {
@@ -92,14 +70,14 @@ class AcchiMuiteAI {
                 freq[d] = (freq[d] || 0) + 1;
             }
             for (const d of this.directions) {
-                scores[d] += (freq[d] || 0) / len * 0.8;
+                scores[d] += (freq[d] || 0) / len * 1.0;
             }
         }
 
-        // ---- 5. 連続ペナルティ（-0.2） ----
-        scores[this.directions[lastIdx]] -= 0.2;
+        // ---- 4. 連続ペナルティ ----
+        scores[this.directions[lastIdx]] -= 0.3;
 
-        // ---- 6. 最高スコア選択 ----
+        // 最高スコア選択
         let bestScore = -Infinity;
         let bestDirs = [];
         for (const [dir, score] of Object.entries(scores)) {
@@ -111,7 +89,6 @@ class AcchiMuiteAI {
             }
         }
 
-        // フォールバック
         if (bestScore <= 0) {
             const freq = {};
             for (const idx of this.opponentHistory) {
@@ -124,12 +101,16 @@ class AcchiMuiteAI {
             }
             return best;
         }
-
         return bestDirs[Math.floor(Math.random() * bestDirs.length)];
     }
 
     getPointDirection() {
-        return this.predictOpponent();
+        const predicted = this.predictOpponent();
+        if (Math.random() < this.missRate) {
+            const others = this.directions.filter(d => d !== predicted);
+            return others[Math.floor(Math.random() * others.length)];
+        }
+        return predicted;
     }
 
     getMoveDirection() {
@@ -142,26 +123,9 @@ class AcchiMuiteAI {
         const scores = {};
         for (const d of this.directions) scores[d] = 0;
 
-        const diffCounts = {};
-        for (let i = 1; i < len; i++) {
-            const diff = ((this.opponentHistory[i] - this.opponentHistory[i - 1]) % 4 + 4) % 4;
-            diffCounts[diff] = (diffCounts[diff] || 0) + 1;
-        }
+        // ---- 差分パターンを完全無効化 ----
 
-        if (len >= 2) {
-            const prevIdx = this.opponentHistory[len - 2];
-            const lastDiff = ((lastIdx - prevIdx) % 4 + 4) % 4;
-            if (diffCounts[lastDiff] && diffCounts[lastDiff] > 1) {
-                const nextIdx = (lastIdx + lastDiff) % 4;
-                scores[this.directions[nextIdx]] += 2.0;
-            }
-            for (const [diff, count] of Object.entries(diffCounts)) {
-                const d = parseInt(diff);
-                const nextIdx = (lastIdx + d) % 4;
-                scores[this.directions[nextIdx]] += (count / len) * 1.2;
-            }
-        }
-
+        // 絶対遷移
         const transitionCounts = {};
         for (let i = 1; i < len; i++) {
             const key = this.directions[this.opponentHistory[i - 1]] + ',' + this.directions[this.opponentHistory[i]];
@@ -171,10 +135,11 @@ class AcchiMuiteAI {
         for (const [key, count] of Object.entries(transitionCounts)) {
             const [prev, next] = key.split(',');
             if (prev === lastDir) {
-                scores[next] += count * 1.0;
+                scores[next] += count * 1.5;
             }
         }
 
+        // 直近傾向
         const recent = this.opponentHistory.slice(-5);
         if (recent.length > 0) {
             const freq = {};
@@ -183,10 +148,11 @@ class AcchiMuiteAI {
                 freq[d] = (freq[d] || 0) + 1;
             }
             for (const d of this.directions) {
-                scores[d] += (freq[d] || 0) / recent.length * 1.0;
+                scores[d] += (freq[d] || 0) / recent.length * 1.2;
             }
         }
 
+        // 全局傾向
         if (len > 0) {
             const freq = {};
             for (const idx of this.opponentHistory) {
@@ -194,8 +160,13 @@ class AcchiMuiteAI {
                 freq[d] = (freq[d] || 0) + 1;
             }
             for (const d of this.directions) {
-                scores[d] += (freq[d] || 0) / len * 0.8;
+                scores[d] += (freq[d] || 0) / len * 1.0;
             }
+        }
+
+        // 動かす側も外し率適用
+        if (Math.random() < this.missRate) {
+            return this.directions[Math.floor(Math.random() * 4)];
         }
 
         // スコアが低い方向を選ぶ（避ける）

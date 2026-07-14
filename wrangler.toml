@@ -1,0 +1,8 @@
+# wrangler.toml（Pages Functions + D1 用）
+name = "janken-ai"
+compatibility_date = "2024-12-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "janken-ai-db"
+database_id = "8db0f2cc-a5a1-407e-a8ac-90f608040a27"  # 実際のIDに置き換え
