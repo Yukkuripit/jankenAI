@@ -1,100 +1,129 @@
+// ============================================================
+//  ファイル: janken-ai.js
+//  役割: じゃんけん特化AI (ランダム判定なし)
+//  - 履歴サイズ150
+//  - スコアリングのみで予測（ランダム判定なし）
+// ============================================================
+
 class JankenAI {
     constructor() {
+        this.MAX_HISTORY = 150;
+
         this.moves = ['グー', 'チョキ', 'パー'];
         this.moveIndex = { 'グー': 0, 'チョキ': 1, 'パー': 2 };
-        this.winMap = { 'グー': 'パー', 'チョキ': 'グー', 'パー': 'チョキ' };
         this.history = [];
-        this.MAX_HISTORY = 50;
-        this.loadedCounts = {
-            moves: { 'グー': 0, 'チョキ': 0, 'パー': 0 },
-            diff: { '0': 0, '1': 0, '2': 0 }
+
+        this.winMap = {
+            'グー': 'パー',
+            'チョキ': 'グー',
+            'パー': 'チョキ'
         };
         this.firstMoveBias = 'グー';
     }
 
-    loadStats(stats) {
-        if (stats) {
-            this.loadedCounts.moves = stats.moves || { 'グー': 0, 'チョキ': 0, 'パー': 0 };
-            this.loadedCounts.diff = stats.diff || { '0': 0, '1': 0, '2': 0 };
-        }
-    }
-
-    exportStats() {
-        return {
-            moves: this.loadedCounts.moves,
-            diff: this.loadedCounts.diff
-        };
-    }
-
     observe(playerMove) {
-        const idx = this.moveIndex[playerMove];
-        this.history.push(idx);
+        const currentIdx = this.moveIndex[playerMove];
+        this.history.push(currentIdx);
         if (this.history.length > this.MAX_HISTORY) {
             this.history.shift();
-        }
-        this.loadedCounts.moves[playerMove] = (this.loadedCounts.moves[playerMove] || 0) + 1;
-        if (this.history.length >= 2) {
-            const prevIdx = this.history[this.history.length - 2];
-            const diff = ((idx - prevIdx) % 3 + 3) % 3;
-            this.loadedCounts.diff[String(diff)] = (this.loadedCounts.diff[String(diff)] || 0) + 1;
         }
     }
 
     predict() {
         const len = this.history.length;
-        if (len === 0) {
-            const maxCount = Math.max(
-                this.loadedCounts.moves['グー'] || 0,
-                this.loadedCounts.moves['チョキ'] || 0,
-                this.loadedCounts.moves['パー'] || 0
-            );
-            for (const move of this.moves) {
-                if ((this.loadedCounts.moves[move] || 0) === maxCount && maxCount > 0) {
-                    return move;
-                }
-            }
-            return this.firstMoveBias;
-        }
+        if (len === 0) return this.firstMoveBias;
 
-        const scores = { 'グー': 0, 'チョキ': 0, 'パー': 0 };
         const lastIdx = this.history[len - 1];
+        const scores = { 'グー': 0, 'チョキ': 0, 'パー': 0 };
 
-        // 履歴から最多手を予測（簡単な実装）
-        const freq = {};
-        for (const idx of this.history) {
-            const m = this.moves[idx];
-            freq[m] = (freq[m] || 0) + 1;
-        }
-        let maxF = 0, best = this.moves[0];
-        for (const [m, c] of Object.entries(freq)) {
-            if (c > maxF) { maxF = c; best = m; }
+        // ---- 差分カウント再計算 ----
+        const diffCounts = {};
+        for (let i = 1; i < len; i++) {
+            const diff = ((this.history[i] - this.history[i - 1]) % 3 + 3) % 3;
+            diffCounts[diff] = (diffCounts[diff] || 0) + 1;
         }
 
-        // D1統計も考慮
-        const totalMoves = Object.values(this.loadedCounts.moves).reduce((a, b) => a + b, 0);
-        if (totalMoves > 0) {
-            for (const move of this.moves) {
-                scores[move] += (this.loadedCounts.moves[move] || 0) / totalMoves * 0.5;
+        // ---- 1. 差分パターン（重み1.2） ----
+        if (len >= 2) {
+            const prevIdx = this.history[len - 2];
+            const lastDiff = ((lastIdx - prevIdx) % 3 + 3) % 3;
+            if (diffCounts[lastDiff] && diffCounts[lastDiff] > 1) {
+                const nextIdx = (lastIdx + lastDiff) % 3;
+                scores[this.moves[nextIdx]] += 2.0;
+            }
+            for (const [diff, count] of Object.entries(diffCounts)) {
+                const d = parseInt(diff);
+                const nextIdx = (lastIdx + d) % 3;
+                const weight = count / len;
+                scores[this.moves[nextIdx]] += weight * 1.2;
             }
         }
 
-        scores[best] += 1.0;
+        // ---- 2. 絶対遷移（重み1.0） ----
+        const transitionCounts = {};
+        for (let i = 1; i < len; i++) {
+            const key = this.moves[this.history[i - 1]] + ',' + this.moves[this.history[i]];
+            transitionCounts[key] = (transitionCounts[key] || 0) + 1;
+        }
+        const lastMove = this.moves[lastIdx];
+        for (const [key, count] of Object.entries(transitionCounts)) {
+            const [prev, next] = key.split(',');
+            if (prev === lastMove) {
+                scores[next] += count * 1.0;
+            }
+        }
 
-        // 連続ペナルティ
-        scores[this.moves[lastIdx]] -= 0.3;
+        // ---- 3. 直近傾向（直近5回） ----
+        const recent = this.history.slice(-5);
+        if (recent.length > 0) {
+            const freq = {};
+            for (const idx of recent) {
+                const m = this.moves[idx];
+                freq[m] = (freq[m] || 0) + 1;
+            }
+            for (const m of this.moves) {
+                scores[m] += (freq[m] || 0) / recent.length * 1.0;
+            }
+        }
 
-        let maxScore = -Infinity;
+        // ---- 4. 全局傾向（重み0.8） ----
+        if (len > 0) {
+            const freq = {};
+            for (const idx of this.history) {
+                const m = this.moves[idx];
+                freq[m] = (freq[m] || 0) + 1;
+            }
+            for (const m of this.moves) {
+                scores[m] += (freq[m] || 0) / len * 0.8;
+            }
+        }
+
+        // ---- 5. 連続ペナルティ（-0.2） ----
+        scores[this.moves[lastIdx]] -= 0.2;
+
+        // ---- 6. 最高スコア選択 ----
+        let bestScore = -Infinity;
         let bestMoves = [];
         for (const [move, score] of Object.entries(scores)) {
-            if (score > maxScore) {
-                maxScore = score;
+            if (score > bestScore) {
+                bestScore = score;
                 bestMoves = [move];
-            } else if (score === maxScore) {
+            } else if (score === bestScore) {
                 bestMoves.push(move);
             }
         }
 
-        if (maxScore <= 0) {
+        // フォールバック：最多手
+        if (bestScore <= 0) {
+            const freq = {};
+            for (const idx of this.history) {
+                const m = this.moves[idx];
+                freq[m] = (freq[m] || 0) + 1;
+            }
+            let maxF = 0, best = this.moves[0];
+            for (const [m, c] of Object.entries(freq)) {
+                if (c > maxF) { maxF = c; best = m; }
+            }
             return best;
         }
 
@@ -125,7 +154,5 @@ class JankenAI {
 
     reset() {
         this.history = [];
-        this.loadedCounts.moves = { 'グー': 0, 'チョキ': 0, 'パー': 0 };
-        this.loadedCounts.diff = { '0': 0, '1': 0, '2': 0 };
     }
 }

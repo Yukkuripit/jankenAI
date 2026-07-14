@@ -1,3 +1,67 @@
+/* ============================================================
+   じゃんけん＆あっちむいてホイ AI - シンプルデザイン
+   ダークモード／ライトモード対応
+   ============================================================ */
+
+/* ----- CSS変数（ライトモードデフォルト） ----- */
+:root {
+    --bg-body: #f0f4f8;
+    --bg-container: #ffffff;
+    --border-card: #e9edf2;
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --bg-surface: #f8fafc;
+    --bg-surface-hover: #f1f5f9;
+    --bg-surface-active: #e2e8f0;
+    --bg-input: #f1f5f9;
+    --border-input: #dce2eb;
+    --border-input-hover: #94a3b8;
+    --border-divider: #e2e8f0;
+    --accent: #3b82f6;
+    --accent-light: #dbeafe;
+    --accent-dark: #1d4ed8;
+    --win: #16a34a;
+    --lose: #dc2626;
+    --draw: #d97706;
+    --reset-hover-bg: #fee2e2;
+    --reset-hover-border: #f87171;
+    --reset-hover-text: #b91c1c;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ----- ダークモード ----- */
+body.dark-mode {
+    --bg-body: #0f172a;
+    --bg-container: #1e293b;
+    --border-card: #334155;
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --text-primary: #f1f5f9;
+    --text-secondary: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-light: #64748b;
+    --bg-surface: #2d3a4f;
+    --bg-surface-hover: #3a4a63;
+    --bg-surface-active: #4a5a78;
+    --bg-input: #2d3a4f;
+    --border-input: #475569;
+    --border-input-hover: #94a3b8;
+    --border-divider: #334155;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --accent-dark: #93bbfc;
+    --win: #4ade80;
+    --lose: #f87171;
+    --draw: #fbbf24;
+    --reset-hover-bg: #3b1f1f;
+    --reset-hover-border: #ef4444;
+    --reset-hover-text: #fca5a5;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ----- リセット＆全体 ----- */
 * {
     margin: 0;
     padding: 0;
@@ -5,428 +69,647 @@
 }
 
 body {
-    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-body);
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
-    color: #f1f5f9;
+    color: var(--text-primary);
+    transition: background 0.2s, color 0.2s;
 }
 
 .container {
-    max-width: 750px;
+    max-width: 720px;
     width: 100%;
-    background: rgba(30, 41, 59, 0.85);
-    backdrop-filter: blur(12px);
-    border-radius: 40px;
-    padding: 30px 28px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--bg-container);
+    border-radius: 24px;
+    padding: 28px 30px 34px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-card);
+    transition: background 0.2s, border 0.2s, box-shadow 0.2s;
 }
 
+/* ----- ヘッダー ----- */
 header {
-    text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+}
+
+.header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 header h1 {
-    font-size: 2.2rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #facc15, #f59e0b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 1px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0px;
+    transition: color 0.2s;
 }
 
 .subtitle {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.9rem;
-    margin-top: 4px;
+    margin-top: 2px;
+    font-weight: 400;
 }
 
+/* ----- 🆕 テーマ切り替えボタン ----- */
+.theme-toggle {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--border-input);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-input-hover);
+}
+
+.theme-toggle:active {
+    transform: scale(0.92);
+}
+
+/* ============================================= */
+/*  モード選択                                   */
+/* ============================================= */
 .mode-selector {
-    background: #0f172a;
+    background: var(--bg-surface);
     padding: 14px 18px;
-    border-radius: 40px;
-    margin-bottom: 28px;
-    border: 1px solid #334155;
+    border-radius: 16px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border-divider);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px 20px;
+    gap: 10px 22px;
+    transition: background 0.2s, border 0.2s;
 }
 
 .mode-label {
-    font-weight: 700;
-    color: #94a3b8;
-    font-size: 0.9rem;
-    margin-right: 4px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 .mode-selector label {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.9rem;
-    color: #cbd5e1;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.15s;
 }
 
 .mode-selector label:hover {
-    color: #facc15;
+    color: var(--text-primary);
 }
 
 .mode-selector input[type="radio"] {
-    accent-color: #facc15;
-    width: 16px;
-    height: 16px;
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
     cursor: pointer;
 }
 
+/* ============================================= */
+/*  クールダウントグル                           */
+/* ============================================= */
+.cooldown-toggle {
+    background: var(--bg-surface);
+    padding: 10px 18px;
+    border-radius: 16px;
+    margin-bottom: 22px;
+    border: 1px solid var(--border-divider);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    transition: background 0.2s, border 0.2s;
+}
+
+.cooldown-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.cooldown-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+}
+
+.cooldown-status {
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 2px 14px;
+    border-radius: 40px;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    transition: background 0.2s, color 0.2s;
+}
+
+.cooldown-status.on {
+    background: var(--accent-light);
+    color: var(--accent-dark);
+}
+
+.cooldown-status.off {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+body.dark-mode .cooldown-status.off {
+    background: #3b1f1f;
+    color: #fca5a5;
+}
+
+/* ============================================= */
+/*  スコアボード                                 */
+/* ============================================= */
 .scoreboard {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    background: #0f172a;
-    padding: 16px 14px;
-    border-radius: 24px;
-    margin-bottom: 30px;
-    border: 1px solid #334155;
+    gap: 10px;
+    background: var(--bg-surface);
+    padding: 14px 12px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-divider);
+    transition: background 0.2s, border 0.2s;
 }
 
 .score-item {
     text-align: center;
-    padding: 6px 0;
+    padding: 4px 0;
 }
 
 .score-item .label {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
+    color: var(--text-light);
+    letter-spacing: 0.3px;
+    font-weight: 600;
 }
 
 .score-item span:last-child {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--text-primary);
     line-height: 1.2;
+    transition: color 0.2s;
 }
 
 .score-item.highlight span:last-child {
-    color: #facc15;
+    color: var(--accent);
 }
 
+/* ============================================= */
+/*  バトルエリア（じゃんけん）                   */
+/* ============================================= */
 .battle-area {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #0f172a;
-    border-radius: 60px;
-    padding: 25px 20px;
-    margin-bottom: 20px;
-    border: 1px solid #334155;
+    background: var(--bg-surface);
+    border-radius: 40px;
+    padding: 20px 16px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border-divider);
+    transition: background 0.2s, border 0.2s;
 }
 
-.player-area, .ai-area {
+.player-area,
+.ai-area {
     text-align: center;
     flex: 1;
 }
 
 .battle-area .label {
-    font-size: 0.8rem;
-    color: #94a3b8;
+    font-size: 0.75rem;
+    color: var(--text-light);
     font-weight: 600;
 }
 
 .hand-icon {
-    font-size: 4.5rem;
+    font-size: 4rem;
     line-height: 1.2;
-    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.4));
-    transition: transform 0.15s ease;
 }
 
 .vs {
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: #facc15;
-    padding: 0 8px;
-    text-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-light);
+    padding: 0 6px;
 }
 
+/* ----- 結果メッセージ（じゃんけん） ----- */
 .result-box {
     text-align: center;
-    font-size: 1.4rem;
-    font-weight: 700;
-    padding: 16px 10px;
-    background: #1e293b;
-    border-radius: 30px;
-    margin-bottom: 24px;
-    border-left: 6px solid #facc15;
-    min-height: 68px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 14px 10px;
+    background: var(--bg-surface);
+    border-radius: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--accent);
+    min-height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-primary);
+    transition: background 0.2s, border 0.2s, color 0.2s;
 }
 
+/* ----- アクションボタン（じゃんけん） ----- */
 .action-buttons {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     justify-content: center;
-    margin-bottom: 30px;
+    margin-bottom: 26px;
 }
 
 .hand-btn {
     flex: 1;
-    padding: 16px 8px;
-    font-size: 1.3rem;
+    padding: 14px 6px;
+    font-size: 1.1rem;
     font-weight: 700;
-    background: #1e293b;
-    border: 2px solid #334155;
-    color: #f1f5f9;
-    border-radius: 60px;
+    background: var(--bg-input);
+    border: 2px solid var(--border-input);
+    color: var(--text-secondary);
+    border-radius: 40px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .hand-btn:hover {
-    transform: translateY(-4px);
-    background: #334155;
-    border-color: #facc15;
-    box-shadow: 0 12px 20px -8px rgba(250, 204, 21, 0.2);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-input-hover);
 }
 
 .hand-btn:active {
-    transform: scale(0.96);
+    background: var(--bg-surface-active);
 }
 
 .hand-btn:disabled {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
-    transform: none !important;
+    background: var(--bg-input);
+    border-color: var(--border-input);
 }
 
+/* ----- 履歴（じゃんけん） ----- */
 .history-section h3 {
-    font-size: 0.9rem;
-    color: #94a3b8;
-    margin-bottom: 10px;
-    font-weight: 400;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    font-weight: 500;
 }
 
 #history-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    min-height: 42px;
-    background: #0f172a;
-    padding: 12px 14px;
-    border-radius: 20px;
-    border: 1px solid #334155;
-    margin-bottom: 32px;
+    gap: 6px;
+    min-height: 38px;
+    background: var(--bg-surface);
+    padding: 10px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border-divider);
+    margin-bottom: 28px;
+    transition: background 0.2s, border 0.2s;
 }
 
 .history-tag {
-    background: #1e293b;
-    padding: 4px 14px;
-    border-radius: 40px;
-    font-size: 0.85rem;
-    border: 1px solid #475569;
+    background: var(--bg-input);
+    padding: 3px 12px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-input);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    color: var(--text-secondary);
+    transition: background 0.2s, border 0.2s, color 0.2s;
 }
 
-.history-tag .win { color: #4ade80; }
-.history-tag .lose { color: #f87171; }
-.history-tag .draw { color: #facc15; }
+.history-tag .win {
+    color: var(--win);
+    font-weight: 600;
+}
+.history-tag .lose {
+    color: var(--lose);
+    font-weight: 600;
+}
+.history-tag .draw {
+    color: var(--draw);
+    font-weight: 600;
+}
 
+/* ============================================= */
+/*  あっちむいてホイセクション                   */
+/* ============================================= */
 .acchi-divider {
     text-align: center;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #facc15;
-    letter-spacing: 4px;
-    margin: 20px 0 16px 0;
-    padding-top: 16px;
-    border-top: 2px dashed #334155;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    letter-spacing: 2px;
+    margin: 16px 0 14px 0;
+    padding-top: 14px;
+    border-top: 2px solid var(--border-divider);
+    transition: color 0.2s, border 0.2s;
 }
 
 .acchi-status-box {
-    background: #1e293b;
-    padding: 14px 18px;
-    border-radius: 60px;
+    background: var(--bg-surface);
+    padding: 12px 16px;
+    border-radius: 20px;
     text-align: center;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 20px;
-    border: 1px solid #475569;
-    color: #cbd5e1;
-    min-height: 56px;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-divider);
+    color: var(--text-secondary);
+    min-height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.2s, border 0.2s, color 0.2s;
 }
 
+/* あっちむいてホイ バトルエリア */
 .acchi-battle-area {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #0f172a;
-    border-radius: 40px;
-    padding: 20px 16px;
-    margin-bottom: 18px;
-    border: 1px solid #334155;
+    background: var(--bg-surface);
+    border-radius: 32px;
+    padding: 16px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-divider);
+    transition: background 0.2s, border 0.2s;
 }
 
-.acchi-player, .acchi-ai {
+.acchi-player,
+.acchi-ai {
     text-align: center;
     flex: 1;
 }
 
 .acchi-icon {
-    font-size: 3.8rem;
+    font-size: 3.2rem;
     line-height: 1.2;
-    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.4));
 }
 
 .acchi-role {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin-top: 4px;
-    font-weight: 600;
-    min-height: 20px;
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 3px;
+    font-weight: 500;
+    min-height: 18px;
 }
 
 .acchi-vs {
-    font-size: 1.8rem;
-    color: #facc15;
-    padding: 0 6px;
-    opacity: 0.6;
+    font-size: 1.4rem;
+    color: var(--text-light);
+    padding: 0 4px;
 }
 
+/* 方向パッド */
 .acchi-direction-pad {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin: 10px 0 20px 0;
+    gap: 8px;
+    margin: 8px 0 18px 0;
 }
 
 .dir-row {
     display: flex;
-    gap: 18px;
+    gap: 14px;
     justify-content: center;
 }
 
 .dir-btn {
-    width: 80px;
-    height: 65px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    background: #1e293b;
-    border: 2px solid #334155;
-    color: #f1f5f9;
-    border-radius: 20px;
+    width: 72px;
+    height: 56px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--bg-input);
+    border: 2px solid var(--border-input);
+    color: var(--text-secondary);
+    border-radius: 16px;
     cursor: pointer;
-    transition: all 0.12s ease;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .dir-btn:hover {
-    transform: translateY(-3px);
-    background: #334155;
-    border-color: #60a5fa;
-    box-shadow: 0 10px 20px -8px rgba(96, 165, 250, 0.2);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-input-hover);
 }
 
 .dir-btn:active {
-    transform: scale(0.94);
+    background: var(--bg-surface-active);
 }
 
 .dir-btn:disabled {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
-    transform: none !important;
-    border-color: #334155;
+    background: var(--bg-input);
+    border-color: var(--border-input);
 }
 
+/* あっちむいてホイ 結果 */
 .acchi-result-box {
     text-align: center;
-    font-size: 1.3rem;
-    font-weight: 700;
-    padding: 14px 10px;
-    background: #1e293b;
-    border-radius: 30px;
-    margin-bottom: 20px;
-    border-left: 6px solid #60a5fa;
-    min-height: 60px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 12px 10px;
+    background: var(--bg-surface);
+    border-radius: 20px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--accent);
+    min-height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #e2e8f0;
+    color: var(--text-primary);
+    transition: background 0.2s, border 0.2s, color 0.2s;
 }
 
+/* あっちむいてホイ スコア */
 .acchi-scoreboard {
-    background: #0f172a;
-    padding: 12px 18px;
-    border-radius: 60px;
+    background: var(--bg-surface);
+    padding: 10px 18px;
+    border-radius: 40px;
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
-    gap: 8px 16px;
-    font-size: 0.95rem;
-    color: #94a3b8;
-    border: 1px solid #334155;
-    margin-bottom: 30px;
+    gap: 6px 14px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border-divider);
+    margin-bottom: 26px;
+    transition: background 0.2s, border 0.2s, color 0.2s;
 }
 
 .acchi-scoreboard strong {
-    color: #f8fafc;
-    font-size: 1.2rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
 }
 
+/* ----- リセットボタン ----- */
 .reset-btn {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
     background: transparent;
-    border: 2px solid #475569;
-    color: #94a3b8;
-    font-size: 1rem;
+    border: 2px solid var(--border-input);
+    color: var(--text-muted);
+    font-size: 0.95rem;
     font-weight: 600;
-    border-radius: 60px;
+    border-radius: 40px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .reset-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: white;
-    box-shadow: 0 0 25px rgba(220, 38, 38, 0.2);
+    background: var(--reset-hover-bg);
+    border-color: var(--reset-hover-border);
+    color: var(--reset-hover-text);
 }
 
+/* ============================================= */
+/*  ゲームエリア無効化（モード切替時）          */
+/* ============================================= */
 .game-area-disabled {
     opacity: 0.35;
     pointer-events: none;
-    filter: grayscale(0.6);
 }
 
+/* ============================================= */
+/*  レスポンシブ                                 */
+/* ============================================= */
 @media (max-width: 600px) {
-    .container { padding: 16px; }
-    .scoreboard { grid-template-columns: repeat(2, 1fr); }
-    .hand-icon { font-size: 3.2rem; }
-    .action-buttons { flex-direction: column; }
-    .hand-btn { padding: 14px; }
-    .battle-area { padding: 15px; }
-    .dir-btn { width: 60px; height: 55px; font-size: 0.9rem; }
-    .acchi-icon { font-size: 2.8rem; }
-    .mode-selector { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .container {
+        padding: 16px 14px 20px;
+    }
+
+    .header-top {
+        flex-wrap: wrap;
+    }
+
+    header h1 {
+        font-size: 1.4rem;
+    }
+
+    .scoreboard {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 12px 10px;
+    }
+
+    .score-item span:last-child {
+        font-size: 1.3rem;
+    }
+
+    .hand-icon {
+        font-size: 3rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .hand-btn {
+        padding: 12px 6px;
+        font-size: 1rem;
+    }
+
+    .battle-area {
+        padding: 14px 10px;
+    }
+
+    .dir-btn {
+        width: 60px;
+        height: 48px;
+        font-size: 0.85rem;
+    }
+
+    .acchi-icon {
+        font-size: 2.6rem;
+    }
+
+    .mode-selector {
+        gap: 6px 14px;
+        padding: 12px 14px;
+    }
+
+    .cooldown-toggle {
+        padding: 8px 14px;
+    }
+
+    .mode-selector label {
+        font-size: 0.8rem;
+    }
+
+    .acchi-divider {
+        font-size: 0.85rem;
+    }
+
+    .theme-toggle {
+        width: 38px;
+        height: 38px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .dir-btn {
+        width: 50px;
+        height: 42px;
+        font-size: 0.75rem;
+    }
+
+    .dir-row {
+        gap: 8px;
+    }
+
+    .acchi-icon {
+        font-size: 2.2rem;
+    }
+
+    .vs {
+        font-size: 0.8rem;
+    }
+
+    .acchi-vs {
+        font-size: 1rem;
+    }
 }
